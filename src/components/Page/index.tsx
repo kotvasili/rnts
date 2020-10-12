@@ -1,51 +1,115 @@
-import React, {ReactElement} from 'react';
-import {StyleSheet, SafeAreaView, View} from 'react-native';
+import React, {ReactElement, useState} from 'react';
+import {StyleSheet, View, StatusBar} from 'react-native';
+import {BlurView} from '@react-native-community/blur';
 import {COLORS} from '../../styles/colors';
 import {CONSTANTS} from '../../styles/styleConstants';
-import Animated from 'react-native-reanimated';
+import Animated, {Extrapolate} from 'react-native-reanimated';
 import {FONTS} from '../../styles/fonts';
+import {withAnchorPoint} from 'react-native-anchor-point';
 
 type Props = {
   children: ReactElement[] | ReactElement;
   title: string;
 };
 
+const SCROLL_CONFIG = [-100, 0, 120];
+const HEIGHT = 124;
+
+const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
+
 const Page: React.FC<Props> = ({children, title}) => {
-  const scrollY = new Animated.Value(0);
-  const fz = Animated.interpolate(scrollY, {
-    inputRange: [-50, 0, 150],
-    outputRange: [45, 39, 12],
+  const scrollY = Animated.useValue(0);
+  const [width, setWidth] = useState<number>(0);
+  const scale = Animated.interpolate(scrollY, {
+    inputRange: SCROLL_CONFIG,
+    outputRange: [1.2, 1, 0.5],
+    extrapolate: Extrapolate.CLAMP,
   });
-  console.log(fz);
+
+  const translateY = Animated.interpolate(scrollY, {
+    inputRange: SCROLL_CONFIG,
+    outputRange: [0, 0, -40],
+    extrapolate: Extrapolate.CLAMP,
+  });
+
   return (
-    <View style={styles.background}>
-      <SafeAreaView>
+    <>
+      <StatusBar
+        translucent
+        barStyle={'dark-content'}
+        backgroundColor="transparent"
+      />
+      <Animated.ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainerStyles}
+        scrollEventThrottle={8}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{nativeEvent: {contentOffset: {y: scrollY}}}],
+          {
+            useNativeDriver: true,
+          },
+        )}>
+        <View style={styles.content}>{children}</View>
+      </Animated.ScrollView>
+      <AnimatedBlurView
+        style={[styles.header, {transform: [{translateY}]}]}
+        blurType="light"
+        blurAmount={4}
+        reducedTransparencyFallbackColor={COLORS.bg}>
         <Animated.Text
-          style={StyleSheet.flatten([{...FONTS.black}, {fontSize: fz}])}>
+          onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+          style={StyleSheet.flatten([
+            {...FONTS.black},
+            styles.head,
+            withAnchorPoint(
+              {
+                transform: [
+                  {
+                    scale,
+                  },
+                ],
+              },
+              {x: 0, y: 0.5},
+              {width},
+            ),
+          ])}>
           {title}
         </Animated.Text>
-      </SafeAreaView>
-      <Animated.ScrollView
-        contentContainerStyle={styles.contentContainerStyles}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-        onScroll={Animated.event([
-          {nativeEvent: {contentOffset: {y: scrollY}}},
-        ])}>
-        {children}
-      </Animated.ScrollView>
-    </View>
+      </AnimatedBlurView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  background: {
-    backgroundColor: COLORS.bg,
+  scrollView: {
     flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  head: {
+    fontSize: 39,
+    lineHeight: 51,
+    flexGrow: 0,
+    marginTop: 37,
+  },
+  header: {
+    paddingHorizontal: CONSTANTS.safeAreaHorizontal,
+    flexDirection: 'row',
+    paddingTop: 30,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    zIndex: 1,
+    height: HEIGHT,
+    width: '100%',
   },
   contentContainerStyles: {
     flexGrow: 1,
     paddingHorizontal: CONSTANTS.safeAreaHorizontal,
+  },
+  content: {
+    paddingTop: HEIGHT,
+    zIndex: 1,
   },
 });
 export default Page;
