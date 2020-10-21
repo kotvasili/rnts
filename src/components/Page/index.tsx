@@ -1,5 +1,5 @@
 import React, {ReactElement, useState} from 'react';
-import {StyleSheet, View, StatusBar} from 'react-native';
+import {StyleSheet, View, StatusBar, Platform} from 'react-native';
 import {BlurView} from '@react-native-community/blur';
 import {COLORS} from '../../styles/colors';
 import {CONSTANTS} from '../../styles/styleConstants';
@@ -15,7 +15,10 @@ type Props = {
 const SCROLL_CONFIG = [-100, 0, 120];
 const HEIGHT = 124;
 
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
+const AnimatedBlurView =
+  Platform.OS === 'android'
+    ? Animated.View
+    : Animated.createAnimatedComponent(BlurView);
 
 const Page: React.FC<Props> = ({children, title}) => {
   const scrollY = Animated.useValue(0);
@@ -28,11 +31,12 @@ const Page: React.FC<Props> = ({children, title}) => {
 
   const translateY = Animated.interpolate(scrollY, {
     inputRange: SCROLL_CONFIG,
-    outputRange: [0, 0, -40],
+    outputRange: [0, 0, Platform.OS === 'android' ? -50 : -40],
     extrapolate: Extrapolate.CLAMP,
   });
 
-  return (
+  // @ts-ignore
+    return (
     <>
       <StatusBar
         translucent
@@ -55,7 +59,7 @@ const Page: React.FC<Props> = ({children, title}) => {
       <AnimatedBlurView
         style={[styles.header, {transform: [{translateY}]}]}
         blurType="light"
-        blurAmount={4}
+        blurAmount={15}
         reducedTransparencyFallbackColor={COLORS.bg}>
         <Animated.Text
           onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
@@ -90,7 +94,7 @@ const styles = StyleSheet.create({
     fontSize: 39,
     lineHeight: 51,
     flexGrow: 0,
-    marginTop: 37,
+    marginTop: 'auto',
   },
   header: {
     paddingHorizontal: CONSTANTS.safeAreaHorizontal,
@@ -102,6 +106,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
     height: HEIGHT,
     width: '100%',
+    backgroundColor: Platform.OS === 'android' ? COLORS.accent : undefined,
   },
   contentContainerStyles: {
     flexGrow: 1,
